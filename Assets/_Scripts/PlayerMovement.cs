@@ -122,7 +122,8 @@ public class PlayerMovement : MonoBehaviour
         }
         if (NearToBashAbleObj)
         {
-            BashAbleObj.GetComponent<SpriteRenderer>().color = Color.red;
+            ColorUtility.TryParseHtmlString("#80b280", out Color c);
+            BashAbleObj.GetComponent<SpriteRenderer>().color = c;
             if (Input.GetKeyDown(KeyCode.Mouse1))
             {
                 Time.timeScale = 0;
