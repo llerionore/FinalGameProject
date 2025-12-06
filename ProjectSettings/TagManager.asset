@@ -48,3 +48,18 @@ TagManager:
   - name: Collision
     uniqueID: 1156119659
     locked: 0
+  - name: BackBackground
+    uniqueID: 3521225075
+    locked: 0
+  - name: PanelBBG
+    uniqueID: 667470577
+    locked: 0
+  - name: Background
+    uniqueID: 2449000469
+    locked: 0
+  - name: PanelBG
+    uniqueID: 1857499451
+    locked: 0
+  - name: Foreground
+    uniqueID: 2827200935
+    locked: 0

@@ -122,12 +122,12 @@ public class PlayerMovement : MonoBehaviour
         }
         if (NearToBashAbleObj)
         {
-            ColorUtility.TryParseHtmlString("#80b280", out Color c);
+            ColorUtility.TryParseHtmlString("#40e0d0", out Color c);
             BashAbleObj.GetComponent<SpriteRenderer>().color = c;
             if (Input.GetKeyDown(KeyCode.Mouse1))
             {
                 Time.timeScale = 0;
-                BashAbleObj.transform.localScale = new Vector2(1.4f, 1.4f);
+                BashAbleObj.transform.localScale = new Vector2(1f, 1f);
                 Arrow.SetActive(true);
                 Arrow.transform.position = BashAbleObj.transform.transform.position;
                 IsChosingDir = true;
