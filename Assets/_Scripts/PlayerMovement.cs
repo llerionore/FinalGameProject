@@ -28,11 +28,15 @@ public class PlayerMovement : MonoBehaviour
     Vector3 BashDir;
     private float BashTimeReset;
 
+    [Header("Ghost Mode (no collision)")]
+    [SerializeField] private float ghostDuration = 0.25f;
+    private bool isGhost = false;
 
     float moveInput;
     Rigidbody2D rb;
     Animator animator;
     TrailRenderer trail;
+    MapLayerManager mapManager;
 
     void Start()
     {
@@ -40,6 +44,7 @@ public class PlayerMovement : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         trail = GetComponent<TrailRenderer>();
+        mapManager = FindObjectOfType<MapLayerManager>();
     }
 
     void Update()
@@ -58,6 +63,7 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             isJumping = true;
         }
+
         Bash();
     }
 
@@ -81,9 +87,7 @@ public class PlayerMovement : MonoBehaviour
         isDashing = true;
         trail.emitting = true;
 
-  
         dashDirection = new Vector2(moveInput, 0);
-
 
         if (dashDirection.x == 0)
             dashDirection.x = transform.localScale.x;
@@ -94,7 +98,6 @@ public class PlayerMovement : MonoBehaviour
     IEnumerator StopDash()
     {
         yield return new WaitForSeconds(dashTime);
-
         isDashing = false;
         trail.emitting = false;
     }
@@ -110,7 +113,6 @@ public class PlayerMovement : MonoBehaviour
         RaycastHit2D[] Rays = Physics2D.CircleCastAll(transform.position, Raduis, Vector3.forward);
         foreach (RaycastHit2D ray in Rays)
         {
-
             NearToBashAbleObj = false;
 
             if (ray.collider.tag == "Bouncable")
@@ -120,16 +122,18 @@ public class PlayerMovement : MonoBehaviour
                 break;
             }
         }
+
         if (NearToBashAbleObj)
         {
             ColorUtility.TryParseHtmlString("#40e0d0", out Color c);
             BashAbleObj.GetComponent<SpriteRenderer>().color = c;
+
             if (Input.GetKeyDown(KeyCode.Mouse1))
             {
                 Time.timeScale = 0;
                 BashAbleObj.transform.localScale = new Vector2(1f, 1f);
                 Arrow.SetActive(true);
-                Arrow.transform.position = BashAbleObj.transform.transform.position;
+                Arrow.transform.position = BashAbleObj.transform.position;
                 IsChosingDir = true;
             }
             else if (IsChosingDir && Input.GetKeyUp(KeyCode.Mouse1))
@@ -139,14 +143,19 @@ public class PlayerMovement : MonoBehaviour
                 IsChosingDir = false;
                 IsBashing = true;
                 rb.velocity = Vector2.zero;
-                transform.position = BashAbleObj.transform.position + new Vector3(0, 0.2f, 0); ;
+                transform.position = BashAbleObj.transform.position + new Vector3(0, 0.2f, 0);
+
                 BashDir = Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position;
                 BashDir.z = 0;
-                
                 BashDir = BashDir.normalized;
+
                 BashAbleObj.GetComponent<Rigidbody2D>().AddForce(-BashDir * 50, ForceMode2D.Impulse);
                 Arrow.SetActive(false);
 
+                if (mapManager != null)
+                    mapManager.SwitchToNextLayer();
+
+                StartCoroutine(BecomeGhostTemporarily());
             }
         }
         else if (BashAbleObj != null)
@@ -154,8 +163,6 @@ public class PlayerMovement : MonoBehaviour
             BashAbleObj.GetComponent<SpriteRenderer>().color = Color.white;
         }
 
-        ////// Preform the bash
-        ///
         if (IsBashing)
         {
             if (BashTime > 0)
@@ -168,10 +175,24 @@ public class PlayerMovement : MonoBehaviour
                 IsBashing = false;
                 BashTime = BashTimeReset;
                 rb.velocity = new Vector2(rb.velocity.x, 0);
-
-
             }
         }
+    }
+
+    IEnumerator BecomeGhostTemporarily()
+    {
+        if (isGhost)
+            yield break;
+
+        isGhost = true;
+
+        int originalLayer = gameObject.layer;
+        gameObject.layer = LayerMask.NameToLayer("PlayerGhost");
+
+        yield return new WaitForSeconds(ghostDuration);
+
+        gameObject.layer = originalLayer;
+        isGhost = false;
     }
 
     void OnDrawGizmos()
