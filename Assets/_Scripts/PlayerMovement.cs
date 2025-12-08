@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -28,9 +28,9 @@ public class PlayerMovement : MonoBehaviour
     Vector3 BashDir;
     private float BashTimeReset;
 
-    [Header("Ghost Mode (no collision)")]
-    [SerializeField] private float ghostDuration = 0.25f;
-    private bool isGhost = false;
+    [Header("Ghost During Bash")]
+    private int originalLayer;
+    private bool ghostEnabled = false;
 
     float moveInput;
     Rigidbody2D rb;
@@ -45,6 +45,8 @@ public class PlayerMovement : MonoBehaviour
         animator = GetComponent<Animator>();
         trail = GetComponent<TrailRenderer>();
         mapManager = FindObjectOfType<MapLayerManager>();
+
+        originalLayer = gameObject.layer;
     }
 
     void Update()
@@ -63,7 +65,6 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             isJumping = true;
         }
-
         Bash();
     }
 
@@ -142,8 +143,12 @@ public class PlayerMovement : MonoBehaviour
                 BashAbleObj.transform.localScale = new Vector2(1, 1);
                 IsChosingDir = false;
                 IsBashing = true;
+
+                // ENABLE GHOST MODE RIGHT WHEN BASH STARTS
+                EnableGhostMode();
+
                 rb.velocity = Vector2.zero;
-                transform.position = BashAbleObj.transform.position + new Vector3(0, 0.2f, 0);
+                transform.position = BashAbleObj.transform.position + new Vector3(0, 0.2f, 0); ;
 
                 BashDir = Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position;
                 BashDir.z = 0;
@@ -153,9 +158,9 @@ public class PlayerMovement : MonoBehaviour
                 Arrow.SetActive(false);
 
                 if (mapManager != null)
+                {
                     mapManager.SwitchToNextLayer();
-
-                StartCoroutine(BecomeGhostTemporarily());
+                }
             }
         }
         else if (BashAbleObj != null)
@@ -163,6 +168,7 @@ public class PlayerMovement : MonoBehaviour
             BashAbleObj.GetComponent<SpriteRenderer>().color = Color.white;
         }
 
+        // BASH MOVEMENT
         if (IsBashing)
         {
             if (BashTime > 0)
@@ -172,6 +178,9 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
+                // BASH ENDED → disable ghost
+                DisableGhostMode();
+
                 IsBashing = false;
                 BashTime = BashTimeReset;
                 rb.velocity = new Vector2(rb.velocity.x, 0);
@@ -179,20 +188,23 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    IEnumerator BecomeGhostTemporarily()
+    // ====== GHOST MODE LOGIC ======
+
+    void EnableGhostMode()
     {
-        if (isGhost)
-            yield break;
+        if (ghostEnabled) return;
 
-        isGhost = true;
-
-        int originalLayer = gameObject.layer;
+        ghostEnabled = true;
+        originalLayer = gameObject.layer;
         gameObject.layer = LayerMask.NameToLayer("PlayerGhost");
+    }
 
-        yield return new WaitForSeconds(ghostDuration);
+    void DisableGhostMode()
+    {
+        if (!ghostEnabled) return;
 
+        ghostEnabled = false;
         gameObject.layer = originalLayer;
-        isGhost = false;
     }
 
     void OnDrawGizmos()
