@@ -9,14 +9,18 @@ public class DeathZone : MonoBehaviour
     {
         if (collision.CompareTag("Player"))
         {
+            PlayerMovement pm = collision.GetComponent<PlayerMovement>();
+
+            if (pm != null && pm.isInvincible)
+                return;
+
             Spawnpoint respawn = collision.GetComponent<Spawnpoint>();
 
             if (respawn != null)
             {
-                // направление отталкивания = от шипов к игроку
                 Vector2 dir = Vector2.up;
-
                 respawn.Kill(dir, knockbackForce, deathDelay);
+                Time.timeScale = 1;
             }
         }
     }

@@ -4,11 +4,16 @@ using System.Collections;
 public class Spawnpoint : MonoBehaviour
 {
     public Transform spawnPoint;
+    public AnimationClip deathClip;
     private Rigidbody2D rb;
+    private PlayerMovement playerMovement;
+    private Animator animator;
     bool dead;
 
     void Start()
     {
+        playerMovement = GetComponent<PlayerMovement>();
+        animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
     }
 
@@ -16,19 +21,32 @@ public class Spawnpoint : MonoBehaviour
     {
         if (dead) return;
 
+        if (playerMovement != null)
+        {
+            playerMovement.enabled = false;
+        }
+        if (animator != null)
+        {
+            animator.SetBool("isDead", true);
+        }
+
         dead = true;
+
+        float actualDelay = delay;
+        if (deathClip != null)
+        {
+            actualDelay = deathClip.length;
+        }
+
         StartCoroutine(DeathRoutine(knockbackDir, force, delay));
     }
 
     IEnumerator DeathRoutine(Vector2 knockbackDir, float force, float delay)
     {
-        // сбрасываем скорость и дэш
         rb.velocity = Vector2.zero;
 
-        // нокбек
         rb.AddForce(knockbackDir.normalized * force, ForceMode2D.Impulse);
 
-        // ждём
         yield return new WaitForSecondsRealtime(delay);
 
         Respawn();
@@ -36,8 +54,21 @@ public class Spawnpoint : MonoBehaviour
 
     void Respawn()
     {
+        if (animator != null)
+        {
+            animator.SetBool("isDead", false);
+        }
+        if (playerMovement != null)
+        {
+            playerMovement.enabled = true;
+        }
+
         rb.velocity = Vector2.zero;
         transform.position = spawnPoint.position;
         dead = false;
+
+        MapLayerManager manager = FindObjectOfType<MapLayerManager>();
+        if (manager != null)
+            manager.ResetToOriginalLayer();
     }
 }

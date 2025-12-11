@@ -4,12 +4,15 @@ using System.Collections.Generic;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Basic Movement and Jumping")]
+    [Header("Basic Movement")]
     public float speed = 5f;
     public float jumpForce = 4f;
     bool isJumping;
+    public float fallGravityMultiplier = 2f;
+    public float lowJumpGravityMultiplier = 2f;
+    float moveInput;
 
-    [Header("Dash Settings")]
+    [Header("Dash")]
     public float dashSpeed = 15f;
     public float dashTime = 0.15f;
     bool isDashing;
@@ -28,11 +31,11 @@ public class PlayerMovement : MonoBehaviour
     Vector3 BashDir;
     private float BashTimeReset;
 
-    [Header("Ghost During Bash")]
+    [Header("Invincibility")]
     private int originalLayer;
     private bool ghostEnabled = false;
+    public bool isInvincible = false;
 
-    float moveInput;
     Rigidbody2D rb;
     Animator animator;
     TrailRenderer trail;
@@ -60,12 +63,37 @@ public class PlayerMovement : MonoBehaviour
 
         if (isDashing) return;
 
-        if (Input.GetKeyDown(KeyCode.Space) && !isJumping)
+        if (Input.GetKeyDown(KeyCode.Space) && !isJumping || Input.GetKeyDown(KeyCode.W) && !isJumping)
         {
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             isJumping = true;
         }
+
         Bash();
+
+        UpdateAnimations();
+    }
+
+    void UpdateAnimations()
+    {
+        animator.SetFloat("moveInput", moveInput);
+
+        bool isWalking = Mathf.Abs(moveInput) > 0.1f && !isJumping && !isDashing && !IsBashing;
+        animator.SetBool("isWalking", isWalking);
+
+        bool isFalling = isJumping && rb.velocity.y < -0.1f;
+        animator.SetBool("isFalling", isFalling);
+
+        bool isRising = isJumping && rb.velocity.y > 0.1f;
+        animator.SetBool("isJumping", isRising);
+
+        animator.SetBool("isDashing", isDashing);
+        animator.SetBool("isBashing", IsBashing);
+
+        if (moveInput > 0)
+            transform.localScale = new Vector3(2, 2, 1);
+        else if (moveInput < 0)
+            transform.localScale = new Vector3(-2, 2, 1);
     }
 
     void FixedUpdate()
@@ -80,6 +108,21 @@ public class PlayerMovement : MonoBehaviour
         }
 
         rb.velocity = new Vector2(moveInput * speed, rb.velocity.y);
+
+        if (rb.velocity.y > 0 && !Input.GetKey(KeyCode.Space))
+        {
+            // weak jump
+            rb.gravityScale = lowJumpGravityMultiplier;
+        }
+        else if (rb.velocity.y < 0)
+        {
+            // falling
+            rb.gravityScale = fallGravityMultiplier;
+        }
+        else
+        {
+            rb.gravityScale = 1f;
+        }
     }
 
     void StartDash()
@@ -93,6 +136,8 @@ public class PlayerMovement : MonoBehaviour
         if (dashDirection.x == 0)
             dashDirection.x = transform.localScale.x;
 
+        animator.SetBool("isDashing", true);
+
         StartCoroutine(StopDash());
     }
 
@@ -100,13 +145,21 @@ public class PlayerMovement : MonoBehaviour
     {
         yield return new WaitForSeconds(dashTime);
         isDashing = false;
+        animator.SetBool("isDashing", false);
         trail.emitting = false;
     }
 
     private void OnCollisionEnter2D(Collision2D col)
     {
-        isJumping = false;
-        canDash = true;
+        foreach (ContactPoint2D contact in col.contacts)
+        {
+            if (contact.normal.y > 0.6f)
+            {
+                isJumping = false;
+                canDash = true;
+                return;
+            }
+        }
     }
 
     void Bash()
@@ -115,14 +168,18 @@ public class PlayerMovement : MonoBehaviour
         foreach (RaycastHit2D ray in Rays)
         {
             NearToBashAbleObj = false;
+            BashAbleObj = null;
 
-            if (ray.collider.tag == "Bouncable")
+            if (ray.collider.CompareTag("Bouncable"))
             {
                 NearToBashAbleObj = true;
                 BashAbleObj = ray.collider.transform.gameObject;
                 break;
             }
         }
+
+        if (!NearToBashAbleObj && Arrow.activeSelf)
+            Arrow.SetActive(false);
 
         if (NearToBashAbleObj)
         {
@@ -144,18 +201,26 @@ public class PlayerMovement : MonoBehaviour
                 IsChosingDir = false;
                 IsBashing = true;
 
-                // ENABLE GHOST MODE RIGHT WHEN BASH STARTS
+                isInvincible = true;
+
                 EnableGhostMode();
 
-                rb.velocity = Vector2.zero;
-                transform.position = BashAbleObj.transform.position + new Vector3(0, 0.2f, 0); ;
+                animator.SetBool("isBashing", true);
 
-                BashDir = Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position;
+                rb.velocity = Vector2.zero;
+                transform.position = BashAbleObj.transform.position + new Vector3(0, 0.2f, 0);
+
+                BashDir = (Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position);
                 BashDir.z = 0;
                 BashDir = BashDir.normalized;
 
-                BashAbleObj.GetComponent<Rigidbody2D>().AddForce(-BashDir * 50, ForceMode2D.Impulse);
-                Arrow.SetActive(false);
+                BashDir = (BashDir + Vector3.up * 0.15f).normalized;
+
+                rb.AddForce(BashDir * BashPower, ForceMode2D.Impulse);
+
+                var objRb = BashAbleObj.GetComponent<Rigidbody2D>();
+                if (objRb != null)
+                    objRb.AddForce(-BashDir * (BashPower * 0.7f), ForceMode2D.Impulse);
 
                 if (mapManager != null)
                 {
@@ -168,27 +233,25 @@ public class PlayerMovement : MonoBehaviour
             BashAbleObj.GetComponent<SpriteRenderer>().color = Color.white;
         }
 
-        // BASH MOVEMENT
         if (IsBashing)
         {
-            if (BashTime > 0)
+            BashTime -= Time.deltaTime;
+            rb.velocity = BashDir * BashPower;
+
+            if (BashTime <= 0)
             {
-                BashTime -= Time.deltaTime;
-                rb.velocity = BashDir * BashPower * Time.deltaTime;
-            }
-            else
-            {
-                // BASH ENDED → disable ghost
                 DisableGhostMode();
 
                 IsBashing = false;
+                isInvincible = false;
                 BashTime = BashTimeReset;
-                rb.velocity = new Vector2(rb.velocity.x, 0);
+
+                animator.SetBool("isBashing", false);
+
+                rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.3f);
             }
         }
     }
-
-    // ====== GHOST MODE LOGIC ======
 
     void EnableGhostMode()
     {

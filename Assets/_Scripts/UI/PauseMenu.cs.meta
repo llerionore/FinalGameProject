@@ -1,11 +1,9 @@
 fileFormatVersion: 2
-guid: bcf925a2f9e98ed478d814f3abf22698
+guid: b3ea5772f56e24441827cff97e20ca2d
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences:
-  - spawnPoint: {instanceID: 0}
-  - deathClip: {fileID: 7400000, guid: a1d18ed2a632dea41a4bd6a06f332e29, type: 2}
+  defaultReferences: []
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

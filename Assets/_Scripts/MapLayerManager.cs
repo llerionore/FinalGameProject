@@ -41,7 +41,6 @@ public class MapLayerManager : MonoBehaviour
 
     private void SetLayerGroupActive(MapLayerGroup group, bool active)
     {
-        // Включаем/выключаем визуальные объекты
         foreach (GameObject layer in group.GetAllLayers())
         {
             if (layer != null)
@@ -49,6 +48,15 @@ public class MapLayerManager : MonoBehaviour
                 layer.SetActive(active);
             }
         }
+    }
+
+    public void ResetToOriginalLayer()
+    {
+        SetLayerGroupActive(layers[currentLayerIndex], false);
+
+        currentLayerIndex = 0;
+
+        SetLayerGroupActive(layers[currentLayerIndex], true);
     }
 
     public void SwitchToNextLayer()
@@ -59,7 +67,6 @@ public class MapLayerManager : MonoBehaviour
 
         SetLayerGroupActive(layers[currentLayerIndex], true);
 
-        Debug.Log("Карта переключена на слой: " + layers[currentLayerIndex].Name +
-              ". Фактическое состояние Foreground: " + layers[currentLayerIndex].Foreground.activeSelf);
+        Debug.Log("Current Layer: " + layers[currentLayerIndex].Name);
     }
 }
