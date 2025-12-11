@@ -12,6 +12,12 @@ public class PlayerMovement : MonoBehaviour
     public float lowJumpGravityMultiplier = 2f;
     float moveInput;
 
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip jumpSound;
+    public AudioClip dashSound;
+    public AudioClip bashSound;
+
     [Header("Dash")]
     public float dashSpeed = 15f;
     public float dashTime = 0.15f;
@@ -36,6 +42,8 @@ public class PlayerMovement : MonoBehaviour
     private bool ghostEnabled = false;
     public bool isInvincible = false;
 
+    public bool isDead = false;
+
     Rigidbody2D rb;
     Animator animator;
     TrailRenderer trail;
@@ -54,6 +62,8 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (isDead) return;
+
         moveInput = Input.GetAxisRaw("Horizontal");
 
         if (Input.GetButtonDown("Dash") && canDash)
@@ -61,16 +71,22 @@ public class PlayerMovement : MonoBehaviour
             StartDash();
         }
 
-        if (isDashing) return;
+        if (isDashing)
+        {
+            UpdateAnimations();
+            return;
+        }
 
         if (Input.GetKeyDown(KeyCode.Space) && !isJumping || Input.GetKeyDown(KeyCode.W) && !isJumping)
         {
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             isJumping = true;
+
+            if (jumpSound != null)
+                audioSource.PlayOneShot(jumpSound);
         }
 
         Bash();
-
         UpdateAnimations();
     }
 
@@ -98,8 +114,8 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (IsBashing)
-            return;
+        if (isDead) return;
+        if (IsBashing) return;
 
         if (isDashing)
         {
@@ -111,12 +127,10 @@ public class PlayerMovement : MonoBehaviour
 
         if (rb.velocity.y > 0 && !Input.GetKey(KeyCode.Space))
         {
-            // weak jump
             rb.gravityScale = lowJumpGravityMultiplier;
         }
         else if (rb.velocity.y < 0)
         {
-            // falling
             rb.gravityScale = fallGravityMultiplier;
         }
         else
@@ -130,6 +144,9 @@ public class PlayerMovement : MonoBehaviour
         canDash = false;
         isDashing = true;
         trail.emitting = true;
+
+        if (dashSound != null)
+            audioSource.PlayOneShot(dashSound);
 
         dashDirection = new Vector2(moveInput, 0);
 
@@ -200,6 +217,9 @@ public class PlayerMovement : MonoBehaviour
                 BashAbleObj.transform.localScale = new Vector2(1, 1);
                 IsChosingDir = false;
                 IsBashing = true;
+
+                if (dashSound != null)
+                    audioSource.PlayOneShot(dashSound);
 
                 isInvincible = true;
 

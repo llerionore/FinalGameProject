@@ -5,10 +5,15 @@ public class Spawnpoint : MonoBehaviour
 {
     public Transform spawnPoint;
     public AnimationClip deathClip;
+
     private Rigidbody2D rb;
     private PlayerMovement playerMovement;
     private Animator animator;
     bool dead;
+
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip deathSound;
 
     void Start()
     {
@@ -19,52 +24,43 @@ public class Spawnpoint : MonoBehaviour
 
     public void Kill(Vector2 knockbackDir, float force, float delay)
     {
+
         if (dead) return;
-
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
-        if (animator != null)
-        {
-            animator.SetBool("isDead", true);
-        }
-
         dead = true;
 
-        float actualDelay = delay;
-        if (deathClip != null)
-        {
-            actualDelay = deathClip.length;
-        }
+        playerMovement.isDead = true;
+        rb.velocity = Vector2.zero;
 
-        StartCoroutine(DeathRoutine(knockbackDir, force, delay));
+        animator.SetBool("isDead", true);
+
+        ScreenFlash.instance.Flash();
+
+        float deathDuration = deathClip != null ? deathClip.length : delay;
+
+        if (deathSound != null && audioSource != null)
+            audioSource.PlayOneShot(deathSound);
+
+        StartCoroutine(DeathRoutine(knockbackDir, force, deathDuration));
     }
 
     IEnumerator DeathRoutine(Vector2 knockbackDir, float force, float delay)
     {
         rb.velocity = Vector2.zero;
-
         rb.AddForce(knockbackDir.normalized * force, ForceMode2D.Impulse);
-
-        yield return new WaitForSecondsRealtime(delay);
+        yield return new WaitForSeconds(delay);
 
         Respawn();
     }
 
     void Respawn()
     {
-        if (animator != null)
-        {
-            animator.SetBool("isDead", false);
-        }
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = true;
-        }
+        animator.SetBool("isDead", false);
+
+        playerMovement.isDead = false;
 
         rb.velocity = Vector2.zero;
         transform.position = spawnPoint.position;
+
         dead = false;
 
         MapLayerManager manager = FindObjectOfType<MapLayerManager>();

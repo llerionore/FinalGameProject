@@ -68,5 +68,7 @@ public class MapLayerManager : MonoBehaviour
         SetLayerGroupActive(layers[currentLayerIndex], true);
 
         Debug.Log("Current Layer: " + layers[currentLayerIndex].Name);
+
+        ScreenFlash.instance.Flash();
     }
 }

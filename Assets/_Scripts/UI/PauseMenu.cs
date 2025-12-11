@@ -26,6 +26,7 @@ public class PauseMenu : MonoBehaviour
         pausePanel.SetActive(true);
         Time.timeScale = 0f;
         isPaused = true;
+        Debug.Log("Button is pressed");
     }
 
     public void ResumeGame()
